@@ -1,0 +1,31 @@
+Resources:
+
+    ECR1:
+        Type: AWS::ECR::Repository
+        Properties:
+          RepositoryName: "engage-app"
+          RepositoryPolicyText:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Sid: AllowPushPull
+                Effect: Allow
+                Principal:
+                  AWS:
+                    - "iamarn"
+                Action:
+                  - "ecr:GetDownloadUrlForLayer"
+                  - "ecr:BatchGetImage"
+                  - "ecr:BatchCheckLayerAvailability"
+                  - "ecr:PutImage"
+                  - "ecr:CompleteLayerUpload"
+                  - "ecr:InitiateLayerUpload"
+                  - "ecr:UploadLayerPart"
+
+
+Outputs:
+    ECR1RepoName:
+        Value: !Ref ECR1
+        Description: ECR Repository Name
+        Export:
+            Name: !Join [ ":", [ !Ref "AWS::StackName", ECR1RepoName ] ]

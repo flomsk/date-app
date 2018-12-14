@@ -1,0 +1,19 @@
+version: '3'
+
+services:
+
+  app:
+    image: ${IMAGE_APP}
+    build: app
+    restart: always
+    expose:
+      - "3000"
+
+#  nginx:
+#    image: ${IMAGE_NGINX}
+#    build: nginx
+#    restart: always
+#    depends_on:
+#      - app
+#    ports:
+#      - "80:80"

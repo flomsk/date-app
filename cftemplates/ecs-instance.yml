@@ -1,0 +1,117 @@
+Parameters:
+
+  VPC:
+    Description: Default VPC
+    Type: String
+    Default: defvpc
+
+  KeyName:
+    Description: "Name of an existing EC2 KeyPair to enable SSH access to the instance"
+    Type: AWS::EC2::KeyPair::KeyName
+   
+#Links here https://docs.aws.amazon.com/en_us/AmazonECS/latest/developerguide/ecs-optimized_AMI.html
+Mappings:
+  RegionMap: 
+    us-east-1:
+      amiid: ami-0b9a214f40c38d5eb
+    us-east-2:
+      amiid: ami-09a64272e7fe706b6
+    us-west-1:
+      amiid: ami-0e7dd5fe55b87a5fe
+    us-west-2:
+      amiid: ami-00430184c7bb49914
+    eu-west-1:
+      amiid: ami-05b65c0f6a75c1c64
+    eu-west-2:
+      amiid: ami-0209769f0c963e791
+    eu-west-3:
+      amiid: ami-06b685336aa497c15
+    eu-central-1:
+      amiid: ami-0bb804e8cd910a664
+    ap-northeast-1:
+      amiid: ami-08681de00a0aae54f
+    ap-northeast-2:
+      amiid: ami-0d947b1901b27a37c
+    ap-southeast-1:
+      amiid: ami-0a3f70f0255af1d29
+    ap-southeast-2:
+      amiid: ami-05b48eda7f92aadbe
+    ca-central-1:
+      amiid: ami-00d1bdbd447b5933a
+    ap-south-1:
+      amiid: ami-0590d0dd683026eab
+    sa-east-1:
+      amiid: ami-01bca91ecf4c1f494
+    us-gov-west-1:
+      amiid: ami-5256cf33
+
+Resources:
+  
+  EC2ECSRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "ec2.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role
+
+  InstanceProfile:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      Path: "/"
+      Roles:
+        -
+          !Ref EC2ECSRole
+
+  ECSInstance: 
+    Type: "AWS::EC2::Instance"
+    Properties: 
+      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", amiid]
+      InstanceType: t2.micro
+      KeyName: !Ref KeyName
+      IamInstanceProfile: !Ref InstanceProfile
+      SecurityGroupIds:
+        - !Ref InstanceSG
+      Tags:
+        -
+          Key: Name
+          Value: ecs1
+      UserData:
+        Fn::Base64:
+          Fn::Sub:
+            - |
+              #!/bin/bash
+              echo ECS_CLUSTER=${ClusterName} >> /etc/ecs/ecs.config
+            - ClusterName:
+                Fn::ImportValue: "ECSCluster"
+
+  InstanceSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+     VpcId: !Ref VPC
+     GroupDescription: Access to ECS Instance
+     SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: "tcp"
+          FromPort: 22
+          ToPort: 22
+        - SourceSecurityGroupId: !ImportValue ALBSGID
+          IpProtocol: "tcp"
+          FromPort: 0
+          ToPort: 65535
+
+Outputs:
+
+  InstanceSG:
+    Value: !Ref InstanceSG
+    Export:
+      Name: 'InstanceSG'
